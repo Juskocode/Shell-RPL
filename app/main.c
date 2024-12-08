@@ -7,7 +7,7 @@ int main() {
 
   char input[100];
   if (fgets(input, 100, stdin) != NULL) {
-	printf("$ %s", input);
+	printf("$ %s: not found", input);
   }
   else {
 	perror("$ invalid input");

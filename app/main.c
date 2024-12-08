@@ -12,6 +12,7 @@
 #define RED     "\x1b[31m"
 
 #define MAX_ARGS 10
+#define MAX_CWD_SIZE 1024
 
 // Command Handler Function Pointer
 typedef void (*command_handler)(const char *input);
@@ -22,11 +23,14 @@ typedef struct {
     command_handler handler;
 } Command;
 
-// Utility Functions
+// ======================= Utility Functions =======================
+
+/** Checks if a file is executable */
 int check_exec(const char *path) {
     return access(path, X_OK) == 0;
 }
 
+/** Finds the full path of an executable */
 char* find_executable(const char *file) {
     char *path_env = getenv("PATH");
     if (!path_env)
@@ -49,6 +53,7 @@ char* find_executable(const char *file) {
     return NULL;
 }
 
+/** Parses input into an array of arguments */
 char** parse_args(const char *input) {
     char **args = malloc(MAX_ARGS * sizeof(char *));
     if (!args) {
@@ -57,21 +62,36 @@ char** parse_args(const char *input) {
     }
 
     int i = 0;
+ 
     char *input_copy = strdup(input);
     char *arg = strtok(input_copy, " ");
     while (arg != NULL && i < MAX_ARGS - 1) {
-        args[i++] = arg;
+        args[i++] = strdup(arg);  // Allocate memory for each argument
         arg = strtok(NULL, " ");
     }
-    args[i] = NULL;  
+    args[i] = NULL;
+
+    free(input_copy);
     return args;
 }
 
-// Command Handlers
+/** Frees the memory allocated for arguments */
+void free_args(char **args) {
+    if (!args) return;
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
+}
+
+// ==================== Built-in Command Handlers ====================
+
+/** Handles the `echo` command */
 void handle_echo(const char *input) {
     printf(GREEN "%s\n" RESET, input + 5);
 }
 
+/** Handles the `type` command */
 void handle_type(const char *input) {
     const char *target = input + 5;
 
@@ -82,7 +102,7 @@ void handle_type(const char *input) {
     } else if (strcmp(target, "type") == 0) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
     } else if (strcmp(target, "pwd") == 0) {
-	printf(BLUE "pwd " GREEN "is a shell builtin\n" RESET);
+        printf(BLUE "pwd " GREEN "is a shell builtin\n" RESET);
     } else {
         char *path = find_executable(target);
         if (path) {
@@ -93,63 +113,76 @@ void handle_type(const char *input) {
     }
 }
 
-void handle_exit(const char *input) {
+/** Handles the `exit` command */
+void handle_exit() {
     exit(0);
 }
 
+/** Handles the `pwd` command */
+void handle_pwd() {
+    char cwd[MAX_CWD_SIZE];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        printf(GREEN "%s\n" RESET, cwd);
+    } else {
+        perror(RED "getcwd failed" RESET);
+    }
+}
+
+// ================== External Command Execution ==================
+
+/** Executes external commands */
 void handle_external(const char *input) {
     char **args = parse_args(input);
     char *path = find_executable(args[0]);
-	
-    if (path) {
-	pid_t pid = fork();
-	if (pid == 0) {
-		// exe child process
-	        execvp(path, args);
-        	perror(RED "Execution failed" RESET);  // If execvp fails
-		exit(EXIT_FAILURE);
-	}
-	else if (pid > 0) {
-		// parent process wait child
-		int status;
-		waitpid(pid, &status, 0);
-	}
-	else
-		printf(RED "fork failed" RESET);
-    }
-    else 
-        printf(RED "%s: not found\n" RESET, args[0]);
 
-    free(args);   
+    if (path) {
+        pid_t pid = fork();
+        if (pid == 0) {
+            // In child process
+            execvp(path, args);
+            perror(RED "Execution failed" RESET);  // If execvp fails
+            exit(EXIT_FAILURE);
+        } else if (pid > 0) {
+            // In parent process
+            int status;
+            waitpid(pid, &status, 0);
+        } else {
+            perror(RED "Fork failed" RESET);
+        }
+    } else {
+        printf(RED "%s: not found\n" RESET, args[0]);
+    }
+
+    free_args(args);
 }
 
-//void handle_pwd() {
-//
-//}
+// ===================== Command Dispatcher =====================
 
-// Command Dispatcher
+/** Dispatches commands to the appropriate handlers */
 void dispatch_command(const char *input) {
     // Define built-in commands
     Command commands[] = {
         {"echo", handle_echo},
         {"type", handle_type},
         {"exit", handle_exit},
-//	{"pwd", handle_pwd},
+        {"pwd", handle_pwd},
         {NULL, NULL}  // Sentinel
     };
 
-    // Identify command
+    // Check if the input matches a built-in command
     for (int i = 0; commands[i].name != NULL; ++i) {
         if (strncmp(input, commands[i].name, strlen(commands[i].name)) == 0) {
             commands[i].handler(input);
             return;
         }
     }
-    // Handle external command
+
+    // Handle external commands
     handle_external(input);
 }
 
-// Main Loop
+// ======================== Main Loop ========================
+
 int main() {
     char input[100];
 

@@ -25,7 +25,7 @@ char* handle_path(const char *file) {
 	while (dir != NULL) {
 		
 		//strjoin path + file into fullpath
-		snprintf(full_path, sizeof(full_path), "%s/%s", path_copy, file);
+		snprintf(full_path, sizeof(full_path), "%s/%s", dir, file);
 		if (check_exec(full_path)) {
 			free(path_copy);
 			return full_path;

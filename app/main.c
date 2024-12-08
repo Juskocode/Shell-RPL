@@ -19,8 +19,9 @@ void execute_type(char *input) {
         printf(BLUE "exit " GREEN "is a shell builtin\n" RESET);
     } else if (!strncmp(input + 5, "type", 4)) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
-    } else {
-        printf(RED "Unknown type: %s\n" RESET, input + 5);
+    }
+    else {
+        printf(RED "%s: not found\n" RESET, input + 5);
     }
 }
 

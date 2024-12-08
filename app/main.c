@@ -14,11 +14,11 @@ void execute_echo(char *input) {
 
 void execute_type(char *input) {
     if (!strncmp(input + 5, "echo", 4)) {
-        printf(BLUE "echo " GREEN "is shell builtin\n" RESET);
+        printf(BLUE "echo " GREEN "is shell a builtin\n" RESET);
     } else if (!strncmp(input + 5, "exit", 4)) {
-        printf(BLUE "exit " GREEN "is a shell builtin\n" RESET);
+        printf(BLUE "exit " GREEN "is a shell a builtin\n" RESET);
     } else if (!strncmp(input + 5, "type", 4)) {
-        printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
+        printf(BLUE "type " GREEN "is a shell a builtin\n" RESET);
     } else {
         printf(RED "Unknown type: %s\n" RESET, input + 5);
     }

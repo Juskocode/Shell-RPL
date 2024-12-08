@@ -2,11 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-void ft_strscpy(char *src, char *dst, int n) {
-	char *srcs = src + n;
-	strcpy(dst, srcs);
-
-}
 
 int main() {
   
@@ -24,9 +19,7 @@ int main() {
 		exit(0);
 	}
 	else if (!strncmp(input, "echo ", 5)) {
-		char echo[95];
-		ft_strscpy(input, echo, 5);
-		printf("%s\n", echo);
+		printf("%s\n", input  + 5);
 	}
 	else {
 		printf("%s: not found\n", input);

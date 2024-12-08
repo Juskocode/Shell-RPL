@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -10,105 +10,129 @@
 #define YELLOW  "\x1b[33m"
 #define RED     "\x1b[31m"
 
+#define MAX_ARGS 10
+
+// Command Handler Function Pointer
+typedef void (*command_handler)(const char *input);
+
+// Command Structure
+typedef struct {
+    const char *name;
+    command_handler handler;
+} Command;
+
+// Utility Functions
 int check_exec(const char *path) {
-	return access(path, X_OK) == 0;
+    return access(path, X_OK) == 0;
 }
 
-char* handle_path(const char *file) {
-	char *path_env = getenv("PATH");
-	if (!path_env)
-		return NULL;
+char* find_executable(const char *file) {
+    char *path_env = getenv("PATH");
+    if (!path_env)
+        return NULL;
 
-	char *path_copy = strdup(path_env);
-	char *dir = strtok(path_copy, ":");
-	static char full_path[1024];
+    char *path_copy = strdup(path_env);
+    char *dir = strtok(path_copy, ":");
+    static char full_path[1024];
 
-	while (dir != NULL) {
-		
-		//strjoin path + file into fullpath
-		snprintf(full_path, sizeof(full_path), "%s/%s", dir, file);
-		if (check_exec(full_path)) {
-			free(path_copy);
-			return full_path;
-		}
-		//check next dir
-		dir = strtok(NULL, ":");
-	}
-	free(path_copy);
-	return NULL;
+    while (dir != NULL) {
+        snprintf(full_path, sizeof(full_path), "%s/%s", dir, file);
+        if (check_exec(full_path)) {
+            free(path_copy);
+            return full_path;
+        }
+        dir = strtok(NULL, ":");
+    }
+
+    free(path_copy);
+    return NULL;
 }
 
 char** parse_args(const char *input) {
-	
-	char** args = (char**)malloc(sizeof(char*)*10);
-	if (args[0] == NULL) {
-		free(args);
-		return NULL;
-	}
+    char **args = malloc(MAX_ARGS * sizeof(char *));
+    if (!args) {
+        perror(RED "Error allocating memory for args" RESET);
+        exit(1);
+    }
 
-	int i = 0;
-	char* arg = strtok((char*)input, " ");
+    int i = 0;
+    char *input_copy = strdup(input);
+    char *arg = strtok(input_copy, " ");
+    while (arg != NULL && i < MAX_ARGS - 1) {
+        args[i++] = arg;
+        arg = strtok(NULL, " ");
+    }
+    args[i] = NULL;  // Null-terminate the argument array
 
-	while (arg != NULL && i < 9) {
-		args[i++] = arg;
-		arg = strtok(NULL, " "); 
-	}
-	args[i] = NULL;
-	return args;
+    return args;
 }
 
-void execute_echo(const char *input) {
-    printf(GREEN "%s\n" RESET, input);
+// Command Handlers
+void handle_echo(const char *input) {
+    printf(GREEN "%s\n" RESET, input + 5);
 }
 
-void execute_type(const char *input) {
-    if (!strncmp(input + 5, "echo", 4)) {
+void handle_type(const char *input) {
+    const char *target = input + 5;
+
+    if (strcmp(target, "echo") == 0) {
         printf(BLUE "echo " GREEN "is a shell builtin\n" RESET);
-    } else if (!strncmp(input + 5, "exit", 4)) {
+    } else if (strcmp(target, "exit") == 0) {
         printf(BLUE "exit " GREEN "is a shell builtin\n" RESET);
-    } else if (!strncmp(input + 5, "type", 4)) {
+    } else if (strcmp(target, "type") == 0) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
-    }
-    else {
-	char* path = handle_path(input + 5);
-	if (path)
-		printf(GREEN"%s"RESET " is " YELLOW "%s\n" RESET, input + 5, path);
-	else
-        	printf(RED "%s: not found\n" RESET, input + 5);
+    } else {
+        char *path = find_executable(target);
+        if (path) {
+            printf(GREEN "%s" RESET " is " YELLOW "%s\n" RESET, target, path);
+        } else {
+            printf(RED "%s: not found\n" RESET, target);
+        }
     }
 }
 
-void execute_exit() {
+void handle_exit(const char *input) {
     exit(0);
 }
 
-void execute_path(const char *path, const char *input) {
-	char **args = parse_args(input);
-	//Execute path with args
-	if (execvp(path, args) == -1) {
-		printf(RED "%s : exec failed" RESET, input);
-	} else {
-		printf(RED "%s: not found\n"RESET, input);
-	}
-	free(args);
-}
+void handle_external(const char *input) {
+    char **args = parse_args(input);
+    char *path = find_executable(args[0]);
 
-void handle_command(const char *input) {
-    if (!strcmp(input, "exit 0")) {
-        execute_exit();
-    } else if (!strncmp(input, "echo ", 5)) {
-        execute_echo(input + 5);
-    } else if (!strncmp(input, "type ", 5)) {
-        execute_type(input);
+    if (path) {
+        execvp(path, args);
+        perror(RED "Execution failed" RESET);  // If execvp fails
     } else {
-	char *path = handle_path(input);
-	if (path)
-		execute_path(path, input);
-	else
-        	printf(RED "%s: not found\n" RESET, input);
+        printf(RED "%s: not found\n" RESET, args[0]);
     }
+
+    free(args);  // Free args only if execvp fails
+    exit(1);     // Exit to prevent continuing after execvp failure
 }
 
+// Command Dispatcher
+void dispatch_command(const char *input) {
+    // Define built-in commands
+    Command commands[] = {
+        {"echo", handle_echo},
+        {"type", handle_type},
+        {"exit", handle_exit},
+        {NULL, NULL}  // Sentinel
+    };
+
+    // Identify command
+    for (int i = 0; commands[i].name != NULL; ++i) {
+        if (strncmp(input, commands[i].name, strlen(commands[i].name)) == 0) {
+            commands[i].handler(input);
+            return;
+        }
+    }
+
+    // Handle external command
+    handle_external(input);
+}
+
+// Main Loop
 int main() {
     char input[100];
 
@@ -116,12 +140,14 @@ int main() {
         printf("$ ");
         fflush(stdout);
 
-        fgets(input, 100, stdin);
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            break;  // Exit on EOF (Ctrl+D)
+        }
 
-        input[strlen(input) - 1] = '\0';  // Remove newline
-        handle_command(input);
+        input[strcspn(input, "\n")] = '\0';  // Remove newline
+        dispatch_command(input);
     }
-    
+
     return 0;
 }
 

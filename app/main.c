@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define RESET   "\x1b[0m"
 #define GREEN   "\x1b[32m"
@@ -37,6 +38,25 @@ char* handle_path(const char *file) {
 	return NULL;
 }
 
+char** parse_args(const char *input) {
+	
+	char** args = (char**)malloc(sizeof(char*)*10);
+	if (args[0] == NULL) {
+		free(args);
+		return NULL;
+	}
+
+	int i = 0;
+	char* arg = strtok((char*)input, " ");
+
+	while (arg != NULL && i < 9) {
+		args[i++] = arg;
+		arg = strtok(NULL, " "); 
+	}
+	args[i] = NULL;
+	return args;
+}
+
 void execute_echo(const char *input) {
     printf(GREEN "%s\n" RESET, input);
 }
@@ -62,6 +82,17 @@ void execute_exit() {
     exit(0);
 }
 
+void execute_path(const char *path, const char *input) {
+	char **args = parse_args(input);
+	//Execute path with args
+	if (execvp(path, args) == -1) {
+		printf(RED "%s : exec failed" RESET, input);
+	} else {
+		printf(RED "%s: not found\n"RESET, input);
+	}
+	free(args);
+}
+
 void handle_command(const char *input) {
     if (!strcmp(input, "exit 0")) {
         execute_exit();
@@ -70,7 +101,11 @@ void handle_command(const char *input) {
     } else if (!strncmp(input, "type ", 5)) {
         execute_type(input);
     } else {
-        printf(RED "%s: not found\n" RESET, input);
+	char *path = handle_path(input);
+	if (path)
+		execute_path(path, input);
+	else
+        	printf(RED "%s: not found\n" RESET, input);
     }
 }
 

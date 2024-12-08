@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 #define RESET   "\x1b[0m"
 #define GREEN   "\x1b[32m"
@@ -62,8 +63,7 @@ char** parse_args(const char *input) {
         args[i++] = arg;
         arg = strtok(NULL, " ");
     }
-    args[i] = NULL;  // Null-terminate the argument array
-
+    args[i] = NULL;  
     return args;
 }
 
@@ -98,16 +98,27 @@ void handle_exit(const char *input) {
 void handle_external(const char *input) {
     char **args = parse_args(input);
     char *path = find_executable(args[0]);
-
+	
     if (path) {
-        execvp(path, args);
-        perror(RED "Execution failed" RESET);  // If execvp fails
-    } else {
-        printf(RED "%s: not found\n" RESET, args[0]);
+	pid_t pid = fork();
+	if (pid == 0) {
+		// exe child process
+	        execvp(path, args);
+        	perror(RED "Execution failed" RESET);  // If execvp fails
+		exit(EXIT_FAILURE);
+	}
+	else if (pid > 0) {
+		// parent process wait child
+		int status;
+		waitpid(pid, &status, 0);
+	}
+	else
+		printf(RED "fork failed" RESET);
     }
+    else 
+        printf(RED "%s: not found\n" RESET, args[0]);
 
-    free(args);  // Free args only if execvp fails
-    exit(1);     // Exit to prevent continuing after execvp failure
+    free(args);   
 }
 
 // Command Dispatcher

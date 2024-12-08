@@ -138,7 +138,6 @@ void dispatch_command(const char *input) {
             return;
         }
     }
-
     // Handle external command
     handle_external(input);
 }

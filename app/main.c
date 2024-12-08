@@ -73,16 +73,16 @@ void handle_echo(const char *input) {
 }
 
 void handle_type(const char *input) {
-    const char *target = input;
+    const char *target = input + 5;
 
     if (strcmp(target, "echo") == 0) {
         printf(BLUE "echo " GREEN "is a shell builtin\n" RESET);
-    } else if (strcmp(target + 5, "exit") == 0) {
+    } else if (strcmp(target, "exit") == 0) {
         printf(BLUE "exit " GREEN "is a shell builtin\n" RESET);
-    } else if (strcmp(target + 5, "type") == 0) {
+    } else if (strcmp(target, "type") == 0) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
-    } else if (strcmp(target + 3, "pwd") == 0) {
-	printf(BLUE "pwd" GREEN "is a shell builtin\n" RESET);
+    } else if (strcmp(target, "pwd") == 0) {
+	printf(BLUE "pwd " GREEN "is a shell builtin\n" RESET);
     } else {
         char *path = find_executable(target);
         if (path) {

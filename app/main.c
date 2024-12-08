@@ -14,11 +14,11 @@ int main() {
 	fgets(input, 100, stdin);	
 
 	input[strlen(input) - 1] = '\0';	
-	if (1) {	
-		printf("%s: not found\n", input);
+	if (!strcmp(input, "exit 0")) {	
 		printf("$ exit 0\n");	
 		exit(0);
-	}
+	}	
+	printf("%s: not found\n", input);
   }
   return 0;
 }

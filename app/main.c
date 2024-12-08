@@ -15,7 +15,6 @@ int main() {
 
 	input[strlen(input) - 1] = '\0';	
 	if (!strcmp(input, "exit 0")) {	
-		printf("$ exit 0\n");	
 		exit(0);
 	}	
 	printf("%s: not found\n", input);

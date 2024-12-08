@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 int main() {
   
@@ -7,10 +8,11 @@ int main() {
 
   char input[100];
   if (fgets(input, 100, stdin) != NULL) {
-	printf("$ %s: not found", input);
+	input[strlen(input) - 1] = '\0';	
+	printf("%s: not found\n", input);
   }
   else {
-	perror("$ invalid input");
+	perror("invalid input");
   }
   return 0;
 }

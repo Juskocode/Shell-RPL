@@ -73,14 +73,16 @@ void handle_echo(const char *input) {
 }
 
 void handle_type(const char *input) {
-    const char *target = input + 5;
+    const char *target = input;
 
     if (strcmp(target, "echo") == 0) {
         printf(BLUE "echo " GREEN "is a shell builtin\n" RESET);
-    } else if (strcmp(target, "exit") == 0) {
+    } else if (strcmp(target + 5, "exit") == 0) {
         printf(BLUE "exit " GREEN "is a shell builtin\n" RESET);
-    } else if (strcmp(target, "type") == 0) {
+    } else if (strcmp(target + 5, "type") == 0) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
+    } else if (strcmp(target + 3, "pwd") == 0) {
+	printf(BLUE "pwd" GREEN "is a shell builtin\n" RESET);
     } else {
         char *path = find_executable(target);
         if (path) {
@@ -121,6 +123,10 @@ void handle_external(const char *input) {
     free(args);   
 }
 
+//void handle_pwd() {
+//
+//}
+
 // Command Dispatcher
 void dispatch_command(const char *input) {
     // Define built-in commands
@@ -128,6 +134,7 @@ void dispatch_command(const char *input) {
         {"echo", handle_echo},
         {"type", handle_type},
         {"exit", handle_exit},
+//	{"pwd", handle_pwd},
         {NULL, NULL}  // Sentinel
     };
 

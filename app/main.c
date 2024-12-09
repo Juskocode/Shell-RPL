@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 #define RESET   "\x1b[0m"
 #define GREEN   "\x1b[32m"
@@ -28,6 +29,25 @@ typedef struct {
 /** Checks if a file is executable */
 int check_exec(const char *path) {
     return access(path, X_OK) == 0;
+}
+
+/** Checks if a path is a directory */
+int check_dir(const char *path) {
+    struct stat path_stat;
+
+    // Check if `stat` fails
+    if (stat(path, &path_stat) != 0) {
+        printf(GREEN "cd: %s" RED ": No such file or directory\n" RESET, path);
+        return 0;
+    }
+
+    // Check if the path is not a directory
+    if (!S_ISDIR(path_stat.st_mode)) {
+        printf(GREEN "cd: %s" RED ": Not a directory\n" RESET, path);
+        return 0;
+    }
+
+    return 1;
 }
 
 /** Finds the full path of an executable */
@@ -62,11 +82,11 @@ char** parse_args(const char *input) {
     }
 
     int i = 0;
- 
     char *input_copy = strdup(input);
     char *arg = strtok(input_copy, " ");
+
     while (arg != NULL && i < MAX_ARGS - 1) {
-        args[i++] = strdup(arg);  // Allocate memory for each argument
+        args[i++] = strdup(arg);
         arg = strtok(NULL, " ");
     }
     args[i] = NULL;
@@ -103,6 +123,8 @@ void handle_type(const char *input) {
         printf(BLUE "type " GREEN "is a shell builtin\n" RESET);
     } else if (strcmp(target, "pwd") == 0) {
         printf(BLUE "pwd " GREEN "is a shell builtin\n" RESET);
+    } else if (strcmp(target, "cd") == 0) {
+        printf(BLUE "cd " GREEN "is a shell builtin\n" RESET);
     } else {
         char *path = find_executable(target);
         if (path) {
@@ -114,17 +136,28 @@ void handle_type(const char *input) {
 }
 
 /** Handles the `exit` command */
-void handle_exit() {
+void handle_exit(const char *input) {
     exit(0);
 }
 
 /** Handles the `pwd` command */
-void handle_pwd() {
+void handle_pwd(const char *input) {
     char cwd[MAX_CWD_SIZE];
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
         printf(GREEN "%s\n" RESET, cwd);
     } else {
         perror(RED "getcwd failed" RESET);
+    }
+}
+
+/** Handles the `cd` command */
+void handle_cd(const char *input) {
+    const char *path = input + 3;
+
+    if (check_dir(path)) {
+        if (chdir(path) != 0) {
+            perror(RED "chdir error" RESET);
+        }
     }
 }
 
@@ -138,12 +171,10 @@ void handle_external(const char *input) {
     if (path) {
         pid_t pid = fork();
         if (pid == 0) {
-            // In child process
-            execvp(path, args);
-            perror(RED "Execution failed" RESET);  // If execvp fails
+            execvp(path, args);  // In child process
+            perror(RED "Execution failed" RESET);
             exit(EXIT_FAILURE);
         } else if (pid > 0) {
-            // In parent process
             int status;
             waitpid(pid, &status, 0);
         } else {
@@ -160,16 +191,15 @@ void handle_external(const char *input) {
 
 /** Dispatches commands to the appropriate handlers */
 void dispatch_command(const char *input) {
-    // Define built-in commands
     Command commands[] = {
         {"echo", handle_echo},
         {"type", handle_type},
         {"exit", handle_exit},
+        {"cd", handle_cd},
         {"pwd", handle_pwd},
-        {NULL, NULL}  // Sentinel
+        {NULL, NULL}
     };
 
-    // Check if the input matches a built-in command
     for (int i = 0; commands[i].name != NULL; ++i) {
         if (strncmp(input, commands[i].name, strlen(commands[i].name)) == 0) {
             commands[i].handler(input);
@@ -177,7 +207,6 @@ void dispatch_command(const char *input) {
         }
     }
 
-    // Handle external commands
     handle_external(input);
 }
 

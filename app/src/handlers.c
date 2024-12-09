@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "envcp.h"
 #include "handlers.h"
 
 /** Handles the `echo` command */
@@ -31,12 +32,12 @@ void handle_type(const char *input) {
 }
 
 /** Handles the `exit` command */
-void handle_exit(const char *input) {
+void handle_exit() {
     exit(0);
 }
 
 /** Handles the `pwd` command */
-void handle_pwd(const char *input) {
+void handle_pwd() {
     char cwd[MAX_CWD_SIZE];
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
         printf(GREEN "%s\n" RESET, cwd);

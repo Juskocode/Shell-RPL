@@ -36,9 +36,9 @@ int check_exec(const char *path) {
 int check_dir(const char *path) {
     struct stat path_stat;
 
-    if (stat(path, &path_stat) != 0) {
+    if (stat(path, &path_stat) != 0) { 
         printf(GREEN "cd: %s" RED ": No such file or directory\n" RESET, path);
-        return 0;
+	return 0;
     }
 
     if (!S_ISDIR(path_stat.st_mode)) {
@@ -110,7 +110,7 @@ char* resolve_path(const char *path) {
     static char resolved_path[MAX_CWD_SIZE];
 
     if (realpath(path, resolved_path) == NULL) {
-        perror(RED "Error resolving path" RESET);
+        printf(GREEN "cd: %s" RED ": No such file or directory\n" RESET, path);
         return NULL;
     }
 

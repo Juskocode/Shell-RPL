@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #define RESET   "\x1b[0m"
 #define GREEN   "\x1b[32m"
@@ -35,13 +36,11 @@ int check_exec(const char *path) {
 int check_dir(const char *path) {
     struct stat path_stat;
 
-    // Check if `stat` fails
     if (stat(path, &path_stat) != 0) {
         printf(GREEN "cd: %s" RED ": No such file or directory\n" RESET, path);
         return 0;
     }
 
-    // Check if the path is not a directory
     if (!S_ISDIR(path_stat.st_mode)) {
         printf(GREEN "cd: %s" RED ": Not a directory\n" RESET, path);
         return 0;
@@ -104,6 +103,20 @@ void free_args(char **args) {
     free(args);
 }
 
+// ==================== Path Resolution Functions ====================
+
+/** Resolves a relative or absolute path */
+char* resolve_path(const char *path) {
+    static char resolved_path[MAX_CWD_SIZE];
+
+    if (realpath(path, resolved_path) == NULL) {
+        perror(RED "Error resolving path" RESET);
+        return NULL;
+    }
+
+    return resolved_path;
+}
+
 // ==================== Built-in Command Handlers ====================
 
 /** Handles the `echo` command */
@@ -154,8 +167,13 @@ void handle_pwd(const char *input) {
 void handle_cd(const char *input) {
     const char *path = input + 3;
 
-    if (check_dir(path)) {
-        if (chdir(path) != 0) {
+    if (strcmp(path, "") == 0) {
+        path = getenv("HOME");
+    }
+
+    char *resolved_path = resolve_path(path);
+    if (resolved_path && check_dir(resolved_path)) {
+        if (chdir(resolved_path) != 0) {
             perror(RED "chdir error" RESET);
         }
     }

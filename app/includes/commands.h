@@ -14,6 +14,6 @@ typedef struct {
     command_handler handler;
 } Command;
 
-void dispath_command(const char *input);
+void dispatch_command(const char *input);
 
 #endif

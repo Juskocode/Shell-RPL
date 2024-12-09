@@ -8,7 +8,7 @@ BLUE   = $(shell printf "\33[34m")
 PURPLE = $(shell printf "\33[35m")
 TITLE  = $(shell printf "\33[32;40m")
 
-NAME     = app
+NAME     = shell
 FLAGS    = -Wall -Wextra -Werror -g
 IFLAGS   = -Iincludes
 CC       = cc

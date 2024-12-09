@@ -167,7 +167,7 @@ void handle_pwd(const char *input) {
 void handle_cd(const char *input) {
     const char *path = input + 3;
 
-    if (strcmp(path, "") == 0) {
+    if (strcmp(path, "~") == 0) {
         path = getenv("HOME");
     }
 

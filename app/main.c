@@ -154,9 +154,26 @@ char* resolve_path(const char *path) {
 // ==================== Built-in Command Handlers ====================
 
 /** Handles the `echo` command */
+/** Handles the `echo` command */
 void handle_echo(const char *input) {
-    printf(GREEN "%s\n" RESET, input + 5);
+    const char *message = input + 5; // Skip the "echo " part
+    char buffer[1024];
+    int buf_index = 0;
+    int in_single_quote = 0;
+
+    while (*message) {
+        if (*message == '\'') {
+            in_single_quote = !in_single_quote; // Toggle single-quote state
+        } else if (!in_single_quote || *message != '\'') {
+            buffer[buf_index++] = *message;
+        }
+        message++;
+    }
+
+    buffer[buf_index] = '\0'; // Null-terminate the string
+    printf(GREEN "%s\n" RESET, buffer);
 }
+
 
 /** Handles the `type` command */
 void handle_type(const char *input) {

@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include "colors.h"
 #include "utils.h"
 
@@ -46,6 +47,15 @@ char* find_executable(const char *file) {
     return NULL;
 }
 
+/** Frees the memory allocated for arguments */
+void free_args(char **args) {
+    if (!args) return;
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
+}
+
 /** Parses input into an array of arguments */
 char** parse_args(const char *input) {
     char **args = malloc(MAX_ARGS * sizeof(char *));
@@ -55,24 +65,47 @@ char** parse_args(const char *input) {
     }
 
     int i = 0;
-    char *input_copy = strdup(input);
-    char *arg = strtok(input_copy, " ");
+    const char *ptr = input;
+    char buffer[1024];
+    int buf_index = 0;
+    int in_single_quote = 0;
 
-    while (arg != NULL && i < MAX_ARGS - 1) {
-        args[i++] = strdup(arg);
-        arg = strtok(NULL, " ");
+    while (*ptr) {
+        if (isspace(*ptr) && !in_single_quote) {  // Argument separator
+            if (buf_index > 0) {  // Save the current token
+                buffer[buf_index] = '\0';
+                args[i++] = strdup(buffer);
+                buf_index = 0;
+
+                if (i >= MAX_ARGS - 1) {
+                    fprintf(stderr, RED "Too many arguments.\n" RESET);
+                    break;
+                }
+            }
+            ptr++;
+        } else if (*ptr == '\'') {  // Handle single quotes
+            if (in_single_quote) {  // Closing single quote
+                in_single_quote = 0;
+            } else {  // Opening single quote
+                in_single_quote = 1;
+            }
+            ptr++;  // Skip the quote
+        } else {  // Regular character
+            buffer[buf_index++] = *ptr++;
+        }
     }
-    args[i] = NULL;
 
-    free(input_copy);
+    // Add the last token if necessary
+    if (buf_index > 0) {
+        if (in_single_quote) {
+            fprintf(stderr, RED "Error: Unmatched single quote.\n" RESET);
+            free_args(args);  // Frees allocated memory safely
+            return NULL;
+        }
+        buffer[buf_index] = '\0';
+        args[i++] = strdup(buffer);
+    }
+
+    args[i] = NULL;  // Null-terminate the argument list
     return args;
-}
-
-/** Frees the memory allocated for arguments */
-void free_args(char **args) {
-    if (!args) return;
-    for (int i = 0; args[i] != NULL; i++) {
-        free(args[i]);
-    }
-    free(args);
 }

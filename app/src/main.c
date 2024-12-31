@@ -16,7 +16,8 @@ int main() {
         }
 
         input[strcspn(input, "\n")] = '\0';  // Remove newline
-        dispatch_command(input);
+//       	tokenize(input); 
+	dispatch_command(input);
     }
 
     return 0;
